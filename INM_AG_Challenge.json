@@ -1,0 +1,404 @@
+{
+  "name": "INM_AG_Challenge",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "=Eres HR Buddy, asistente virtual de RR. HH. de ChocolaTech. \n\nREGLAS GLOBALES:\n- Responde SIEMPRE en español y SOLO sobre recursos humanos. \n- Usa la herramienta Vector Store EXCLUSIVAMENTE para responder dudas sobre políticas generales. No inventes datos.\n\nFLUJO DE ATENCIÓN:\n1. IDENTIFICACIÓN: Si el usuario no indica su nombre completo, pídeselo amablemente.\n2. BÚSQUEDA: Cuando tengas el nombre, usa la herramienta MySQL para buscar sus datos.\n3. RESULTADOS:\n   - Si la herramienta devuelve información: Entrégale sus datos de vacaciones/horas.\n   - Si la herramienta NO devuelve información (vacío): Esto significa que el empleado no existe o que por motivos de seguridad el usuario no tiene permisos para ver esa información. Responde EXACTAMENTE: \"Lo siento, no puedo encontrar tus datos o, por políticas de seguridad, no tienes autorización para ver la información solicitada.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -816,
+        624
+      ],
+      "id": "ac9c12d1-317c-428d-8216-b85b383052ed",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatCohere",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        768
+      ],
+      "id": "33470764-f60d-4826-9ff4-f1f545d85489",
+      "name": "Cohere Chat Model",
+      "credentials": {
+        "cohereApi": {
+          "id": "0PVM7ROZVHp2mKbs",
+          "name": "Cohere account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -768,
+        800
+      ],
+      "id": "ea9ba246-3f8e-440e-8080-f0649e1f6a93",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Útil SOLAMENTE para buscar políticas de la empresa, reglas generales de recursos humanos y normas de la empresa. No contiene datos personales de empleados.",
+        "memoryKey": {
+          "__rl": true,
+          "value": "vector_store_key",
+          "mode": "list",
+          "cachedResultName": "vector_store_key"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        -672,
+        816
+      ],
+      "id": "2891339b-d6e2-4045-aea0-7a258c098df0",
+      "name": "Simple Vector Store"
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v3.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        944
+      ],
+      "id": "29d812b6-7468-4076-9f03-dcd1ab575f05",
+      "name": "Embeddings Cohere",
+      "credentials": {
+        "cohereApi": {
+          "id": "0PVM7ROZVHp2mKbs",
+          "name": "Cohere account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "empleados",
+          "mode": "list",
+          "cachedResultName": "empleados"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "nombre",
+              "condition": "LIKE",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', `usa siempre el formato %nombre% para busqueda parcial, Por Ejemplo: %Eric Garcia%`, 'string') }}"
+            },
+            {
+              "column": "chat_id",
+              "value": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySqlTool",
+      "typeVersion": 2.5,
+      "position": [
+        -384,
+        800
+      ],
+      "id": "3aeff139-6d2d-4dc4-9a7d-35fb5ededc51",
+      "name": "Select rows from a table in MySQL",
+      "credentials": {
+        "mySql": {
+          "id": "VqmADcxCVqCIgBDU",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1792,
+        640
+      ],
+      "id": "3be2d0c7-ccf5-4c6f-b3f3-db07c0ec2bd5",
+      "name": "Telegram Trigger",
+      "webhookId": "42515e56-eaa2-444a-9112-0137930670b4",
+      "credentials": {
+        "telegramApi": {
+          "id": "hM0pCVWoatv93JiI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -464,
+        624
+      ],
+      "id": "fe213810-cadc-45f3-9f23-fbd65bd9db36",
+      "name": "Send a text message",
+      "webhookId": "7cdac7eb-9ca1-492c-9b77-42574d2f005e",
+      "credentials": {
+        "telegramApi": {
+          "id": "hM0pCVWoatv93JiI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza el siguiente mensaje del usuario y determina si es una consulta relacionada con Recursos Humanos (vacaciones, políticas, banco de horas, sueldos, normas).\n\nATENCIÓN: Si el usuario simplemente se está presentando o dando su nombre (ej. \"me llamo Juan\", \"soy María\", \"Cristian Nodal\"), también debes considerarlo como válido.\n\nMensaje del usuario: {{ $json.message.text }}\n\nResponde ÚNICAMENTE con la palabra TRUE si cumple con lo anterior.\nResponde ÚNICAMENTE con la palabra FALSE si es un saludo genérico o un tema ajeno a la empresa.",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -1568,
+        544
+      ],
+      "id": "66507498-c753-48da-9642-e23b55744bd9",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatCohere",
+      "typeVersion": 1,
+      "position": [
+        -1488,
+        768
+      ],
+      "id": "30301275-762d-44fa-9731-eb71ce983258",
+      "name": "Cohere Chat Model1",
+      "credentials": {
+        "cohereApi": {
+          "id": "0PVM7ROZVHp2mKbs",
+          "name": "Cohere account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4513147a-0fc6-468b-b414-9a85c261ea0e",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "TRUE",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1216,
+        640
+      ],
+      "id": "d1e7579a-1354-4b59-a1f5-2216b75e7d7a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "=Disculpa, como HR Buddy solo estoy autorizado para responder consultas relacionadas con Recursos Humanos de ChocolaTech. ¿Tienes alguna duda sobre tus políticas, vacaciones o banco de horas?",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1072,
+        736
+      ],
+      "id": "d0ec6102-030a-4572-9a51-4ae791de338f",
+      "name": "Send a text message1",
+      "webhookId": "f6d6d2ad-6c08-4712-ab48-268adae25d70",
+      "credentials": {
+        "telegramApi": {
+          "id": "hM0pCVWoatv93JiI",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cohere Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table in MySQL": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cohere Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "03dae1ca-5a9d-438b-adbb-0013268b20c3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8c382c3c073e15c38926794318ca3c9d0a982d574a6d410d20bedeab9bf9be33"
+  },
+  "id": "j2OHtebIRFQT2SZu",
+  "tags": []
+}
